@@ -72,7 +72,7 @@ jobs:
         
     - name: 📊 Upload test results as artifact
       if: ${{ inputs.test_mode }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: test-results-${{ github.run_number }}
         path: output/
