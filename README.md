@@ -42,18 +42,16 @@ cp .env.example .env
 # .envファイルを編集してNotion APIキーとデータベースIDを設定
 ```
 
-### 3. 取引所調査の実行
+### 3. 完全な調査とGitHub同期の実行
 
 ```bash
-# 全102取引所を並列で調査（推奨、約2-5分）
+# 推奨: 調査→Notionアップロード→GitHub同期を一括実行
+poetry run python scripts/complete-survey-and-sync.py
+
+# または個別実行
 poetry run python scripts/survey/survey_all_102_parallel.py
-```
-
-### 4. Notionへのアップロード
-
-```bash
-# APIサンプルコード付きで詳細情報をアップロード
 poetry run python scripts/notion-upload/upload_survey_detailed.py
+poetry run python scripts/github-sync/export_notion_to_github.py
 ```
 
 ## 📊 収集されるデータ
@@ -128,11 +126,18 @@ getdata-actions-notion/
 - 検索・フィルタリング可能な形式
 - APIガイドとして活用可能
 
+### 4. GitHub同期と履歴管理 🆕
+- NotionデータをGitHubリポジトリに自動同期
+- 実行の度に日時付き履歴ファイルを作成
+- マークダウン形式での読みやすいレポート生成
+- GitHub Actionsによる定期的な自動実行
+
 ## 📚 ドキュメント
 
 - [取引所調査ガイド](docs/guides/exchange-survey.md) - 調査プロセスの詳細
 - [プロジェクト構造](docs/project-structure.md) - ディレクトリとファイルの説明
 - [スクリプトREADME](scripts/README.md) - 各スクリプトの使用方法
+- [GitHub同期ガイド](docs/github-sync-guide.md) - Notion→GitHub同期機能の詳細 🆕
 
 ## 🎯 使用例
 

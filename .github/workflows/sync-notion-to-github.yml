@@ -1,0 +1,109 @@
+name: Sync Notion Database to GitHub
+
+on:
+  # 手動実行
+  workflow_dispatch:
+    inputs:
+      auto_commit:
+        description: '自動でコミット・プッシュを実行する'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+        - 'true'
+        - 'false'
+  
+  # 週1回自動実行（日曜日 09:00 JST）
+  schedule:
+    - cron: '0 0 * * 0'  # UTC 00:00 = JST 09:00
+
+jobs:
+  sync-notion-data:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: チェックアウト
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Python環境のセットアップ
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Poetry のインストール
+      run: |
+        curl -sSL https://install.python-poetry.org | python3 -
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+    
+    - name: 依存関係のインストール
+      run: |
+        poetry install --no-root
+    
+    - name: NotionからGitHubへの同期実行
+      env:
+        NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+        NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+        LOG_LEVEL: INFO
+      run: |
+        poetry run python scripts/github-sync/export_notion_to_github.py
+    
+    - name: 変更の確認
+      id: check_changes
+      run: |
+        if [ -n "$(git status --porcelain)" ]; then
+          echo "changes=true" >> $GITHUB_OUTPUT
+          echo "変更されたファイル:"
+          git status --porcelain
+        else
+          echo "changes=false" >> $GITHUB_OUTPUT
+          echo "変更されたファイルはありません"
+        fi
+    
+    - name: Gitコミットとプッシュ
+      if: steps.check_changes.outputs.changes == 'true' && (github.event.inputs.auto_commit == 'true' || github.event_name == 'schedule')
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add docs/exchange-data/
+        git add output/ || true
+        
+        # タイムスタンプ付きのコミットメッセージ
+        TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S JST')
+        git commit -m "update: Notionデータをバックアップ ($TIMESTAMP)
+
+        🤖 Generated with [Claude Code](https://claude.ai/code)
+
+        Co-Authored-By: Claude <noreply@anthropic.com>"
+        
+        git push
+    
+    - name: 実行結果のサマリー
+      run: |
+        echo "## 🎉 Notion同期完了" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**実行時刻**: $(date '+%Y-%m-%d %H:%M:%S JST')" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ steps.check_changes.outputs.changes }}" == "true" ]; then
+          echo "✅ **変更を検出**: ファイルを更新しました" >> $GITHUB_STEP_SUMMARY
+          
+          # 生成されたファイルの情報
+          if [ -f "docs/exchange-data/exchange-survey-results.md" ]; then
+            echo "- 📄 [最新調査結果](docs/exchange-data/exchange-survey-results.md)" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ -f "docs/exchange-data/latest-survey-data.json" ]; then
+            echo "- 📊 [JSONデータ](docs/exchange-data/latest-survey-data.json)" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # 履歴ファイル
+          LATEST_HISTORY=$(ls -t docs/exchange-data/history/survey_*.md 2>/dev/null | head -1 || echo "")
+          if [ -n "$LATEST_HISTORY" ]; then
+            echo "- 📚 [履歴ファイル]($LATEST_HISTORY)" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+        else
+          echo "ℹ️ **変更なし**: Notionデータに更新はありませんでした" >> $GITHUB_STEP_SUMMARY
+        fi
