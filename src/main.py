@@ -17,6 +17,7 @@ from .notion.direct_uploader import NotionDirectUploader
 from .notion.simple_uploader import SimpleNotionUploader
 from .notion.rate_limiter import NotionOptimizedUploader
 from .notion.enhanced_uploader import EnhancedNotionUploader
+from .notion.realdata_uploader import RealDataNotionUploader
 
 
 def setup_logging():
@@ -131,10 +132,15 @@ async def collect_all_exchanges(limit: int = None, upload_to_notion: bool = True
     # Upload to Notion if enabled
     if upload_to_notion and Config.NOTION_API_KEY:
         if direct_upload:
-            logger.info("Uploading data directly to existing Notion database...")
-            uploader = SimpleNotionUploader()
+            logger.info("🚀 実データ保存モードで起動（全取引所）")
+            uploader = RealDataNotionUploader()
             upload_results = await uploader.upload_all_exchanges(results)
-            logger.info(f"Simple upload complete: {upload_results['totals']['total_records']} records")
+            
+            totals = upload_results["totals"]
+            logger.info(f"✅ 実データアップロード完了:")
+            logger.info(f"  - 保存したティッカー: {totals['total_tickers']}件")
+            logger.info(f"  - 保存したオーダーブック: {totals['total_orderbooks']}件")
+            logger.info(f"  - 合計レコード: {totals['total_records']}件")
         else:
             logger.info("Uploading CSV files to Notion...")
             uploader = NotionUploader()
@@ -208,26 +214,20 @@ def main():
             # Upload to Notion
             if Config.NOTION_API_KEY:
                 if args.direct_upload:
-                    # Use enhanced uploader that saves actual data
-                    uploader = EnhancedNotionUploader()
+                    # Use RealDataNotionUploader that saves actual data
+                    logger.info("🚀 実データ保存モードで起動")
+                    uploader = RealDataNotionUploader()
+                    upload_results = asyncio.run(uploader.upload_all_exchanges(results))
                     
-                    upload_summary = {
-                        "exchanges": {},
-                        "total_records": 0,
-                        "with_raw_data": 0
-                    }
-                    
-                    for exchange_name, data in results.items():
-                        result = asyncio.run(uploader.upload_exchange_data(data))
-                        upload_summary["exchanges"][exchange_name] = result
-                        if result["status"] == "success":
-                            upload_summary["total_records"] += result.get("records_uploaded", 0)
-                            if result.get("raw_data_saved"):
-                                upload_summary["with_raw_data"] += 1
-                    
-                    logger.info(f"Enhanced upload complete: {upload_summary['total_records']} records uploaded")
-                    logger.info(f"Exchanges with full data saved: {upload_summary['with_raw_data']}")
-                    logger.info("Data can be exported to CSV using: python -m src.utils.notion_to_csv")
+                    # 結果表示
+                    totals = upload_results["totals"]
+                    logger.info(f"✅ 実データアップロード完了:")
+                    logger.info(f"  - 成功した取引所: {totals['exchanges_successful']}/{totals['exchanges_processed']}")
+                    logger.info(f"  - 保存したティッカー: {totals['total_tickers']}件")
+                    logger.info(f"  - 保存したオーダーブック: {totals['total_orderbooks']}件")
+                    logger.info(f"  - 合計レコード: {totals['total_records']}件")
+                    logger.info("")
+                    logger.info("💡 データ抽出方法: python -m src.utils.notion_to_csv")
                 else:
                     # CSV file upload
                     uploader = NotionUploader()
