@@ -2,12 +2,45 @@
 
 **仮想通貨データ収集＆Notion自動保存システム**
 
-GitHub Actionsで定期実行し、102の取引所から仮想通貨データを収集してNotionに自動保存するPythonツールです。
+このプロジェクトは、GitHub Actionsを使用して15分間隔で自動実行され、世界中の102の仮想通貨取引所から公開データを収集し、Notionデータベースに蓄積する完全自動化システムです。認証不要の公開APIのみを使用し、リアルタイムで価格・取引量・オーダーブック情報を取得・分析できます。
 
 [![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://python.org)
 [![Poetry](https://img.shields.io/badge/Poetry-Dependency%20Management-blue.svg)](https://python-poetry.org)
 [![CCXT](https://img.shields.io/badge/CCXT-102%20Exchanges-green.svg)](https://github.com/ccxt/ccxt)
 [![Notion](https://img.shields.io/badge/Notion-API%20Integration-black.svg)](https://developers.notion.com)
+[![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-Auto%20Collection-green.svg)](https://github.com/features/actions)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+## 🎯 プロジェクト概要
+
+### 🏗️ システム設計
+
+このシステムは以下のアーキテクチャで構成されています：
+
+```
+┌─────────────────┐    ┌──────────────┐    ┌─────────────────┐
+│  GitHub Actions │    │   Python     │    │    Notion       │
+│  (15分間隔実行)  │───▶│  Data Collector│───▶│   Database      │
+│                 │    │   (CCXT)     │    │                 │
+└─────────────────┘    └──────────────┘    └─────────────────┘
+         │                       │                     │
+         │              ┌────────▼────────┐           │
+         │              │ 102 Exchanges   │           │
+         │              │ Public APIs     │           │
+         │              │ (No Auth)       │           │
+         │              └─────────────────┘           │
+         │                                            │
+         └──────────── エラー監視・週次レポート ──────────┘
+```
+
+### 💡 主要特徴
+
+**🌍 グローバル対応**: 世界102の取引所から同時収集
+**🔓 認証不要**: 公開APIのみ使用でセキュア
+**⚡ 高性能**: 非同期処理で高速データ収集
+**🤖 完全自動化**: GitHub Actionsで24時間運用
+**📊 即座に分析**: Notionで収集データを可視化・検索
+**🛡️ エラー対応**: 自動監視・復旧・レポート機能
 
 ## ✨ 特徴
 
@@ -85,7 +118,27 @@ NOTION_DATABASE_ID=your_database_or_page_id_here
 
 ## 🚀 使用方法
 
-### 基本的な使い方
+### 🤖 自動運用（推奨）
+
+**GitHub Actionsによる完全自動化**:
+
+1. **GitHub Secretsの設定**:
+   ```
+   NOTION_API_KEY=your_notion_api_key
+   NOTION_DATABASE_ID=your_database_id
+   ```
+
+2. **自動実行開始**:
+   - リポジトリをフォーク・クローン
+   - Secretsを設定するだけで15分後から自動開始
+   - 毎日96回（15分間隔）で自動データ収集
+
+3. **監視とレポート**:
+   - エラー時は自動Issue作成
+   - 週次レポートを自動生成
+   - Notion APIの使用率を最適化管理
+
+### 💻 ローカル実行
 
 #### テストモード（Notion不要）
 
@@ -103,7 +156,7 @@ poetry run python -m src.main --test --exchanges binance --limit 1
 #### 本番モード（Notion統合）
 
 ```bash
-# 【推奨】優先度の高い取引所からNotionに直接保存
+# 【推奨】優先度の高い取引所からNotionに直接保存（API最適化済み）
 poetry run python -m src.main --priority-only --direct-upload
 
 # 特定の取引所数を制限（例：上位5取引所）
@@ -243,23 +296,62 @@ notion_keys/
 
 ## 🎯 使用例・ユースケース
 
-### 個人投資家
+### 💰 個人投資家
+**価格監視とトレンド分析**:
 ```bash
-# 主要取引所の価格監視（15分ごと）
-poetry run python -m src.main --exchanges binance,coinbase,kraken --direct-upload
+# 主要取引所の価格監視（15分ごと自動実行）
+GitHub Actions: 自動運用
+手動実行: poetry run python -m src.main --exchanges binance,coinbase,kraken --direct-upload
 ```
+- リアルタイム価格変動をNotion上で分析
+- 複数取引所の価格差（アービトラージ機会）を発見
+- 24時間の価格履歴を自動蓄積
 
-### データ分析者
+### 📊 データ分析者・研究者
+**市場分析と研究**:
 ```bash
 # 全取引所データ収集 + CSV出力
 poetry run python -m src.main --limit 50
 ```
+- 102取引所の市場動向を包括的に分析
+- 地域別・取引所別の価格相関を研究
+- CSVエクスポートで外部分析ツールと連携
 
-### トレーディングbot開発者
+### 🤖 トレーディングbot開発者
+**戦略開発とバックテスト**:
 ```bash
 # 高頻度データ収集（テストモード）
 poetry run python -m src.main --test --exchanges binance,bybit
 ```
+- 取引アルゴリズムの開発・検証
+- リアルタイムオーダーブック分析
+- 市場マイクロストラクチャー研究
+
+### 🏢 金融機関・フィンテック企業
+**市場監視と規制対応**:
+```bash
+# Enterprise級データ収集
+poetry run python -m src.main --direct-upload  # 全102取引所
+```
+- 規制当局への報告データ自動生成
+- 市場操作・異常取引の検出
+- 顧客への市場情報提供サービス
+
+### 📰 メディア・ニュース配信
+**市場レポート自動生成**:
+- Notionデータから自動記事生成
+- 価格アラート・市場速報の配信
+- 週次・月次市場レポートの作成
+
+### 🎓 教育・学習目的
+**仮想通貨市場の学習**:
+```bash
+# 学習用データ収集
+poetry run python -m src.main --test --limit 3
+```
+- 市場の仕組みと価格形成を理解
+- プログラミング・データ分析スキルの向上
+- ブロックチェーン技術の実践的学習
 
 ## 🤝 コントリビューション
 
@@ -280,11 +372,92 @@ poetry run python -m src.main --test --exchanges binance,bybit
 - テストカバレッジ80%以上
 - セキュリティ重視（APIキー漏洩防止）
 
+## 📚 詳細ドキュメント
+
+### 📖 技術ドキュメント
+- [GitHub Actions セットアップガイド](docs/github-actions-setup.md) - 自動運用の詳細設定
+- [CLAUDE.md](CLAUDE.md) - 開発者向けプロジェクト構造説明
+- [API制限最適化](src/notion/rate_limiter.py) - Notion API使用量最適化
+
+### 🎯 主要機能の詳細
+
+#### 1. 自動データ収集システム
+```python
+# 15分間隔で以下を自動実行
+- 優先10取引所からデータ収集
+- 0.5 RPS でNotion APIアップロード
+- エラー監視と自動復旧
+- 週次パフォーマンスレポート生成
+```
+
+#### 2. Notion統合機能
+- **直接データベース保存**: CSV添付ではなくレコード形式で高速保存
+- **リアルタイム検索**: Notionの強力な検索・フィルター機能
+- **自動集計**: 取引所別・時間別の自動サマリー生成
+- **可視化対応**: グラフ・チャート表示に最適化されたデータ形式
+
+#### 3. API制限最適化
+```yaml
+Notion API制限: 3 req/sec, 2,700 req/15min
+設計値: 0.5 req/sec, 960 req/day
+安全マージン: 83% (同時実行), 20% (日間制限)
+```
+
+### 🔧 高度な設定
+
+#### GitHub Actions カスタマイズ
+```yaml
+# .github/workflows/crypto-data-collection.yml
+env:
+  EXCHANGES_LIMIT: 15          # 取引所数増加
+  RATE_LIMIT_PER_SECOND: 0.3   # より保守的なレート制限
+  MAX_CONCURRENT: 2            # 同時実行数削減
+```
+
+#### 取引所別設定
+```python
+# src/config.py - 優先取引所リスト
+PRIORITY_EXCHANGES = [
+    "binance", "coinbase", "kraken", "bitfinex", "okx", 
+    "bybit", "kucoin", "bitflyer", "coincheck", "zaif"
+]
+```
+
+## 📊 パフォーマンス指標
+
+### 🎯 運用実績（想定値）
+
+| 指標 | 値 | 備考 |
+|------|----|----|
+| **収集頻度** | 15分間隔 | 1日96回実行 |
+| **取引所数** | 10-102 | 設定可能 |
+| **1日のデータ数** | ~960-9,200 | 取引所数により変動 |
+| **API使用率** | 37% | Notion制限の安全圏内 |
+| **成功率** | 95%+ | エラー監視・自動復旧 |
+| **応答時間** | 45-60秒 | 10取引所収集時 |
+
+### 📈 拡張性
+
+**垂直スケーリング**:
+- 取引所数: 10 → 50 → 102
+- 収集頻度: 15分 → 5分 → 1分
+
+**水平スケーリング**:
+- 複数リージョンでの分散実行
+- 地域別取引所の時間帯最適化
+- カスタムNotionワークスペース連携
+
 ## 📞 サポート・問い合わせ
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/getdata-actions-notion/issues)
-- **Discussions**: 機能提案やQ&A
-- **Wiki**: 詳細ドキュメント
+### 🔍 問題解決
+- **Issues**: [GitHub Issues](https://github.com/yourusername/getdata-actions-notion/issues) - バグ報告・機能要望
+- **Discussions**: GitHub Discussions - 使用方法の質問・アイデア共有
+- **Wiki**: 詳細ドキュメント・FAQ・チュートリアル
+
+### 🚀 機能追加・改善提案
+- **プルリクエスト**: 新機能・改善の提案
+- **Issues Labels**: `enhancement`, `feature`, `optimization`
+- **ロードマップ**: 今後の開発計画をIssuesで公開
 
 ## 📄 ライセンス
 
