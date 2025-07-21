@@ -16,6 +16,7 @@ from .notion.uploader import NotionUploader
 from .notion.direct_uploader import NotionDirectUploader
 from .notion.simple_uploader import SimpleNotionUploader
 from .notion.rate_limiter import NotionOptimizedUploader
+from .notion.enhanced_uploader import EnhancedNotionUploader
 
 
 def setup_logging():
@@ -207,18 +208,26 @@ def main():
             # Upload to Notion
             if Config.NOTION_API_KEY:
                 if args.direct_upload:
-                    # Optimized upload with rate limiting for GitHub Actions
-                    from notion_client import AsyncClient
-                    notion_client = AsyncClient(auth=Config.NOTION_API_KEY)
-                    uploader = NotionOptimizedUploader(notion_client, target_rps=0.5)
+                    # Use enhanced uploader that saves actual data
+                    uploader = EnhancedNotionUploader()
                     
-                    # Convert results to format expected by optimized uploader
-                    crypto_data_list = [{"exchange": name, "data": data} for name, data in results.items()]
-                    upload_results = asyncio.run(uploader.upload_crypto_data(crypto_data_list))
+                    upload_summary = {
+                        "exchanges": {},
+                        "total_records": 0,
+                        "with_raw_data": 0
+                    }
                     
-                    logger.info(f"Optimized upload complete: {upload_results['summary']['successful']}/{upload_results['summary']['total_exchanges']} exchanges")
-                    logger.info(f"Total duration: {upload_results['summary']['duration_seconds']:.1f}s")
-                    logger.info(f"Rate limiting stats: {upload_results['rate_limiting']['utilization_percent']:.1f}% utilization")
+                    for exchange_name, data in results.items():
+                        result = asyncio.run(uploader.upload_exchange_data(data))
+                        upload_summary["exchanges"][exchange_name] = result
+                        if result["status"] == "success":
+                            upload_summary["total_records"] += result.get("records_uploaded", 0)
+                            if result.get("raw_data_saved"):
+                                upload_summary["with_raw_data"] += 1
+                    
+                    logger.info(f"Enhanced upload complete: {upload_summary['total_records']} records uploaded")
+                    logger.info(f"Exchanges with full data saved: {upload_summary['with_raw_data']}")
+                    logger.info("Data can be exported to CSV using: python -m src.utils.notion_to_csv")
                 else:
                     # CSV file upload
                     uploader = NotionUploader()
