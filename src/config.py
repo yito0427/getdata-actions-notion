@@ -25,7 +25,7 @@ class Config:
     MAX_CONCURRENT_EXCHANGES = int(os.getenv("MAX_CONCURRENT_EXCHANGES", "10"))
     MAX_RETRIES = int(os.getenv("MAX_RETRIES", "3"))
     RETRY_DELAY = int(os.getenv("RETRY_DELAY", "5"))
-    RATE_LIMIT_PER_SECOND = int(os.getenv("RATE_LIMIT_PER_SECOND", "10"))
+    RATE_LIMIT_PER_SECOND = float(os.getenv("RATE_LIMIT_PER_SECOND", "10"))
     
     # Collection Intervals (seconds)
     TICKER_INTERVAL = int(os.getenv("TICKER_INTERVAL", "60"))
