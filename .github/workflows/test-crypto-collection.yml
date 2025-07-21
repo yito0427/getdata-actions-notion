@@ -59,7 +59,7 @@ jobs:
           poetry-${{ runner.os }}-${{ matrix.python-version }}-
           
     - name: 📚 Install dependencies
-      run: poetry install --with=dev
+      run: poetry install
       
     - name: 🔍 Run linting
       run: |
@@ -142,7 +142,7 @@ jobs:
         virtualenvs-in-project: true
         
     - name: 📚 Install dependencies
-      run: poetry install --with=dev --no-dev
+      run: poetry install --no-dev
       
     - name: 🔗 Test Notion API connection
       env:
