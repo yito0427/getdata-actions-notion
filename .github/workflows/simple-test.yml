@@ -1,0 +1,72 @@
+name: 🧪 Simple Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  simple-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: 🐍 Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: 📦 Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+        
+    - name: 📚 Install dependencies (main only)
+      run: poetry install --only=main
+      
+    - name: 🧪 Quick test run
+      run: |
+        echo "🔍 Testing basic imports..."
+        poetry run python -c "
+        try:
+            import ccxt
+            import asyncio
+            print('✅ CCXT import successful')
+            
+            import pydantic
+            print('✅ Pydantic import successful')
+            
+            from src.config import Config
+            print('✅ Config import successful')
+            
+            print('🎯 All basic imports working!')
+        except Exception as e:
+            print(f'❌ Import error: {e}')
+            exit(1)
+        "
+        
+    - name: 📊 Environment check
+      env:
+        NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+        NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+      run: |
+        echo "🔍 Environment Variables Check:"
+        if [ -n "$NOTION_API_KEY" ]; then
+          echo "✅ NOTION_API_KEY is available"
+        else
+          echo "❌ NOTION_API_KEY not set"
+        fi
+        
+        if [ -n "$NOTION_DATABASE_ID" ]; then
+          echo "✅ NOTION_DATABASE_ID is available"
+        else
+          echo "❌ NOTION_DATABASE_ID not set"
+        fi
+        
+    - name: ✅ Test complete
+      run: |
+        echo "🎉 Simple test completed successfully!"
+        echo "📅 Timestamp: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"

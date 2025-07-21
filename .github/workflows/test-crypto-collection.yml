@@ -59,7 +59,7 @@ jobs:
           poetry-${{ runner.os }}-${{ matrix.python-version }}-
           
     - name: 📚 Install dependencies
-      run: poetry install
+      run: poetry install --with=dev
       
     - name: 🔍 Run linting
       run: |
@@ -102,38 +102,22 @@ jobs:
           coverage.xml
         retention-days: 3
         
-    - name: 📋 Test summary comment
+    - name: 📋 Log test summary
       if: github.event_name == 'pull_request'
-      uses: actions/github-script@v6
-      with:
-        script: |
-          const fs = require('fs');
-          const path = require('path');
-          
-          // Read output files and create summary
-          let summary = `## 🧪 Test Results - ${{ matrix.test-scenario.name }} (Python ${{ matrix.python-version }})\n\n`;
-          
-          if (fs.existsSync('output')) {
-            const files = fs.readdirSync('output');
-            summary += `✅ **Output Files Generated**: ${files.length}\n\n`;
-            
-            files.forEach(file => {
-              if (file.endsWith('.json')) {
-                const content = JSON.parse(fs.readFileSync(path.join('output', file), 'utf8'));
-                summary += `📊 **${content.exchange}**: ${content.ticker_count} tickers, ${content.orderbook_count} orderbooks\n`;
-              }
-            });
-          }
-          
-          summary += `\n🕐 **Duration**: Test completed successfully`;
-          
-          // Post comment on PR
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: summary
-          });
+      run: |
+        echo "## 🧪 Test Results - ${{ matrix.test-scenario.name }} (Python ${{ matrix.python-version }})"
+        echo ""
+        if [ -d "output" ]; then
+          echo "✅ Output Files Generated: $(ls output/ | wc -l)"
+          echo ""
+          for file in output/*.json; do
+            if [ -f "$file" ]; then
+              echo "📊 $(basename "$file"): Test data generated"
+            fi
+          done
+        fi
+        echo ""
+        echo "🕐 Duration: Test completed successfully"
 
   # Notion API接続テスト（秘密情報が設定されている場合のみ）
   test-notion-connection:
@@ -158,7 +142,7 @@ jobs:
         virtualenvs-in-project: true
         
     - name: 📚 Install dependencies
-      run: poetry install --no-dev
+      run: poetry install --with=dev --no-dev
       
     - name: 🔗 Test Notion API connection
       env:

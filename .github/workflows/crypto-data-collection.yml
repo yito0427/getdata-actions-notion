@@ -49,7 +49,7 @@ jobs:
           poetry-${{ runner.os }}-
           
     - name: 📚 Install dependencies
-      run: poetry install --no-dev
+      run: poetry install --only=main
       
     - name: 🌐 Collect cryptocurrency data (Priority Exchanges)
       if: ${{ !inputs.test_mode }}
@@ -85,36 +85,21 @@ jobs:
         echo "📅 Timestamp: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
         echo "🔄 Next run: $(date -u -d '+15 minutes' +"%Y-%m-%d %H:%M:%S UTC")"
         
-    - name: 🚨 Notify on failure
+    - name: 🚨 Log failure details
       if: failure()
-      uses: actions/github-script@v6
-      with:
-        script: |
-          const title = '🚨 Crypto Data Collection Failed';
-          const body = `
-          ❌ **Data collection failed**
-          
-          **Run Details:**
-          - Workflow: ${context.workflow}
-          - Run Number: ${context.runNumber}
-          - Timestamp: ${new Date().toISOString()}
-          - Repository: ${context.repo.owner}/${context.repo.repo}
-          
-          **Action Required:**
-          - Check workflow logs for details
-          - Verify Notion API credentials
-          - Check exchange API availability
-          
-          [View Failed Run](${context.payload.repository.html_url}/actions/runs/${context.runId})
-          `;
-          
-          github.rest.issues.create({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            title: title,
-            body: body,
-            labels: ['bug', 'github-actions', 'crypto-data']
-          });
+      run: |
+        echo "❌ Crypto Data Collection Failed"
+        echo "Workflow: ${{ github.workflow }}"
+        echo "Run Number: ${{ github.run_number }}" 
+        echo "Timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+        echo "Repository: ${{ github.repository }}"
+        echo ""
+        echo "🔍 Action Required:"
+        echo "- Check workflow logs for details"
+        echo "- Verify Notion API credentials"
+        echo "- Check exchange API availability"
+        echo ""
+        echo "📊 View Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
   # 週次レポート生成ジョブ
   weekly-report:
