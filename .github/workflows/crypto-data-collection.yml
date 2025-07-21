@@ -1,11 +1,11 @@
 name: 🚀 Crypto Data Collection
 
 on:
-  # 15分ごとに定期実行 (Notion API制限に最適化)
-  schedule:
-    - cron: '*/15 * * * *'  # 15分間隔で実行
+  # 定期実行を無効化（学習用リポジトリのため）
+  # schedule:
+  #   - cron: '*/15 * * * *'  # 15分間隔で実行
   
-  # 手動実行も可能
+  # 手動実行のみ可能
   workflow_dispatch:
     inputs:
       exchanges_limit:
