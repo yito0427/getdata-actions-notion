@@ -44,7 +44,7 @@ class RealDataNotionUploader:
                     "open": ticker.open,
                     "close": ticker.close,
                     "vwap": ticker.vwap,
-                    "previous_close": ticker.previous_close,
+                    # "previous_close": ticker.previous_close,  # この属性は存在しない
                     "change": ticker.change,
                     "percentage": ticker.percentage
                 },
