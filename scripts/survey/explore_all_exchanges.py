@@ -12,7 +12,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.collectors.base import BaseExchangeCollector
+from src.collectors.base import BaseCollector
 from src.notion.realdata_uploader import RealDataNotionUploader
 from src.config import Config
 from loguru import logger
