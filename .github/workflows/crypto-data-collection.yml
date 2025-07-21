@@ -49,7 +49,7 @@ jobs:
           poetry-${{ runner.os }}-
           
     - name: 📚 Install dependencies
-      run: poetry install
+      run: poetry install --no-root
       
     - name: 🌐 Collect cryptocurrency data (Priority Exchanges)
       if: ${{ !inputs.test_mode }}
