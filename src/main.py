@@ -15,6 +15,7 @@ from .config import Config
 from .notion.uploader import NotionUploader
 from .notion.direct_uploader import NotionDirectUploader
 from .notion.simple_uploader import SimpleNotionUploader
+from .notion.rate_limiter import NotionOptimizedUploader
 
 
 def setup_logging():
@@ -206,10 +207,18 @@ def main():
             # Upload to Notion
             if Config.NOTION_API_KEY:
                 if args.direct_upload:
-                    # Simple direct upload to existing database
-                    uploader = SimpleNotionUploader()
-                    upload_results = asyncio.run(uploader.upload_all_exchanges(results))
-                    logger.info(f"Simple upload complete: {upload_results['totals']['total_records']} records")
+                    # Optimized upload with rate limiting for GitHub Actions
+                    from notion_client import AsyncClient
+                    notion_client = AsyncClient(auth=Config.NOTION_API_KEY)
+                    uploader = NotionOptimizedUploader(notion_client, target_rps=0.5)
+                    
+                    # Convert results to format expected by optimized uploader
+                    crypto_data_list = [{"exchange": name, "data": data} for name, data in results.items()]
+                    upload_results = asyncio.run(uploader.upload_crypto_data(crypto_data_list))
+                    
+                    logger.info(f"Optimized upload complete: {upload_results['summary']['successful']}/{upload_results['summary']['total_exchanges']} exchanges")
+                    logger.info(f"Total duration: {upload_results['summary']['duration_seconds']:.1f}s")
+                    logger.info(f"Rate limiting stats: {upload_results['rate_limiting']['utilization_percent']:.1f}% utilization")
                 else:
                     # CSV file upload
                     uploader = NotionUploader()

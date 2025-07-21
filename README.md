@@ -154,6 +154,7 @@ getdata-actions-notion/
 │   │   └── manager.py          # 複数取引所の並行管理
 │   ├── notion/                 # Notion API統合
 │   │   ├── simple_uploader.py  # 既存DBへの直接アップロード
+│   │   ├── rate_limiter.py     # API制限最適化・バッチ処理
 │   │   ├── database_manager.py # 新規DB作成・管理
 │   │   └── uploader.py         # CSVファイルアップロード
 │   ├── utils/
@@ -166,7 +167,7 @@ getdata-actions-notion/
 ├── data/                       # ローカルCSV出力先
 ├── output/                     # テスト結果出力
 ├── .github/
-│   └── workflows/              # GitHub Actions（予定）
+│   └── workflows/              # GitHub Actions定期実行ワークフロー
 ├── pyproject.toml              # Poetry依存関係管理
 ├── Makefile                    # 開発用コマンド
 ├── .env.example                # 環境変数テンプレート
@@ -209,9 +210,15 @@ make clean
 - **設定管理**: 環境変数・取引所別設定
 - **ローカルテスト**: Notion不要のテストモード
 
+### ✅ GitHub Actions自動化
+
+- **定期実行**: 15分間隔で自動データ収集
+- **Notion API最適化**: 0.5 RPS制限でAPI負荷を最小化
+- **エラー監視**: 失敗時の自動Issue作成とアラート
+- **テスト自動化**: PR時の自動テスト実行
+
 ### 🚧 予定機能
 
-- **GitHub Actions**: 定期実行ワークフロー
 - **Webhooks**: リアルタイム価格アラート
 - **ダッシュボード**: Notion内データ可視化
 - **API拡張**: REST API提供

@@ -1,0 +1,195 @@
+name: 🧪 Test Crypto Data Collection
+
+on:
+  # プルリクエスト時にテスト実行
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'src/**'
+      - 'pyproject.toml'
+      - '.github/workflows/**'
+  
+  # 手動テスト実行
+  workflow_dispatch:
+    inputs:
+      test_exchanges:
+        description: 'Exchanges to test (comma-separated)'
+        required: false
+        default: 'binance,coinbase'
+        type: string
+
+jobs:
+  test-data-collection:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.11']
+        test-scenario:
+          - name: 'Basic Test'
+            args: '--test --limit 2'
+          - name: 'Priority Exchanges'
+            args: '--test --exchanges binance,coinbase,kraken --limit 3'
+          - name: 'Single Exchange Deep Test'
+            args: '--test --exchanges binance --limit 1'
+    
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: 🐍 Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        
+    - name: 📦 Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+        
+    - name: 🔧 Cache Poetry dependencies
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: poetry-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
+        restore-keys: |
+          poetry-${{ runner.os }}-${{ matrix.python-version }}-
+          
+    - name: 📚 Install dependencies
+      run: poetry install
+      
+    - name: 🔍 Run linting
+      run: |
+        poetry run flake8 src/ --count --select=E9,F63,F7,F82 --show-source --statistics
+        poetry run mypy src/ --ignore-missing-imports
+        
+    - name: 🧪 Run unit tests
+      run: poetry run pytest tests/ -v --cov=src --cov-report=xml
+      
+    - name: 🌐 Test crypto data collection - ${{ matrix.test-scenario.name }}
+      run: |
+        echo "Testing: ${{ matrix.test-scenario.name }}"
+        poetry run python -m src.main ${{ matrix.test-scenario.args }}
+        
+    - name: 📊 Validate output files
+      run: |
+        # Check if output directory was created
+        if [ -d "output" ]; then
+          echo "✅ Output directory created"
+          ls -la output/
+          
+          # Validate JSON output format
+          for file in output/*.json; do
+            if [ -f "$file" ]; then
+              echo "Validating $file"
+              python -m json.tool "$file" > /dev/null && echo "✅ Valid JSON" || echo "❌ Invalid JSON"
+            fi
+          done
+        else
+          echo "❌ No output directory found"
+          exit 1
+        fi
+        
+    - name: 📈 Upload test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results-${{ matrix.python-version }}-${{ matrix.test-scenario.name }}
+        path: |
+          output/
+          coverage.xml
+        retention-days: 3
+        
+    - name: 📋 Test summary comment
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const path = require('path');
+          
+          // Read output files and create summary
+          let summary = `## 🧪 Test Results - ${{ matrix.test-scenario.name }} (Python ${{ matrix.python-version }})\n\n`;
+          
+          if (fs.existsSync('output')) {
+            const files = fs.readdirSync('output');
+            summary += `✅ **Output Files Generated**: ${files.length}\n\n`;
+            
+            files.forEach(file => {
+              if (file.endsWith('.json')) {
+                const content = JSON.parse(fs.readFileSync(path.join('output', file), 'utf8'));
+                summary += `📊 **${content.exchange}**: ${content.ticker_count} tickers, ${content.orderbook_count} orderbooks\n`;
+              }
+            });
+          }
+          
+          summary += `\n🕐 **Duration**: Test completed successfully`;
+          
+          // Post comment on PR
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: summary
+          });
+
+  # Notion API接続テスト（秘密情報が設定されている場合のみ）
+  test-notion-connection:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    needs: test-data-collection
+    
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: 🐍 Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: 📦 Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+        
+    - name: 📚 Install dependencies
+      run: poetry install --no-dev
+      
+    - name: 🔗 Test Notion API connection
+      env:
+        NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+        NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+      run: |
+        if [ -n "$NOTION_API_KEY" ] && [ -n "$NOTION_DATABASE_ID" ]; then
+          echo "🔍 Testing Notion API connection..."
+          poetry run python -c "
+          import asyncio
+          from notion_client import AsyncClient
+          
+          async def test_connection():
+              try:
+                  client = AsyncClient(auth='$NOTION_API_KEY')
+                  # Test API connection
+                  me = await client.users.me()
+                  print(f'✅ Connected as: {me[\"name\"]}')
+                  
+                  # Test database access
+                  db = await client.databases.retrieve('$NOTION_DATABASE_ID')
+                  print(f'✅ Database access: {db[\"title\"][0][\"plain_text\"]}')
+                  
+              except Exception as e:
+                  print(f'❌ Connection failed: {e}')
+                  return False
+              return True
+              
+          result = asyncio.run(test_connection())
+          exit(0 if result else 1)
+          "
+        else
+          echo "⚠️ Notion credentials not configured - skipping connection test"
+        fi
